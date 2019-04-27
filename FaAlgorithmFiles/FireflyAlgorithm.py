@@ -1,0 +1,101 @@
+import numpy as np
+from FaAlgorithmFiles.Firefly import Firefly
+from CommonFunctions import CostFunction, AtractivenessFunction
+from CommonFunctions import ComputeDistanceBeetweenTwoObjects
+from CommonFunctions import collectListOfPoints
+from DataForPlot import *
+from Config import FA_DataConfig as cf
+from os import path, mkdir
+import sys
+
+
+def CreateSwarmOfFireflies(NumberOfFireflies, maxKp, maxKi, maxKd, beta0):
+    SwarmOfFireflies = []
+    for index in range(NumberOfFireflies):
+        Kp = round(np.random.uniform(0, maxKp), 3)
+        Ki = round(np.random.uniform(0, maxKi), 3)
+        Kd = round(np.random.uniform(0, maxKd), 3)
+        SwarmOfFireflies.append(Firefly(Kp, Ki, Kd, beta0))
+    return SwarmOfFireflies
+
+
+def FirefliesLigthIntensity(CostFunction):
+    return 1 / (CostFunction + 0.000001)
+
+
+def GenerateRandomVector():
+    uX = round(np.random.uniform(-0.15, 0.15), 3)
+    uY = round(np.random.uniform(-0.15, 0.15), 3)
+    RandomVector = {"uX": uX, "uY": uY}
+    return RandomVector
+
+
+def FindTheMostAtractiveFirefly(SwarmOfFireflies):
+    IndexOfTheMostAtractiveFirefly = 0
+    for firefly in SwarmOfFireflies:
+        if firefly.get_Z() < SwarmOfFireflies[IndexOfTheMostAtractiveFirefly].get_Z():
+            IndexOfTheMostAtractiveFirefly = firefly.get_index()
+
+    return IndexOfTheMostAtractiveFirefly
+
+
+if __name__ == '__main__':
+    with open(path.join("results", "results.txt"), "w") as results:
+        Best = None
+        # Fireflies initialization
+        SwarmOfFireflies = None
+        Generation = 0
+        tableOfPoints = []
+        for Generation in range(cf.get_numberOfGenerations()):
+            SwarmOfFireflies = CreateSwarmOfFireflies(cf.get_NumberOfFireflies(), Xmin, Xmax, Ymin, Ymax,
+                                                      cf.get_beta0())
+            tableOfPoints.append(collectListOfPoints(SwarmOfFireflies))
+
+            for iteration in range(cf.get_iteration()):
+                for i in range(cf.get_NumberOfFireflies()):
+                    for j in range(cf.get_NumberOfFireflies()):
+                        CostFunctionFor_Xi = CostFunction(SwarmOfFireflies[i].get_X(), SwarmOfFireflies[i].get_Y())
+                        fXi = FirefliesLigthIntensity(CostFunctionFor_Xi)
+                        CostFunctionFor_Xj = CostFunction(SwarmOfFireflies[j].get_X(), SwarmOfFireflies[j].get_Y())
+                        fXj = FirefliesLigthIntensity(CostFunctionFor_Xj)
+
+                        if fXj > fXi:
+                            Rij = ComputeDistanceBeetweenTwoObjects(SwarmOfFireflies[i], SwarmOfFireflies[j])
+                            beta = AtractivenessFunction(cf.get_beta0(), Rij, cf.get_Lambda())
+                            SwarmOfFireflies[i].set_beta(beta)
+                            ui = GenerateRandomVector()
+                            IIczlonXi = beta * (SwarmOfFireflies[j].get_X() - SwarmOfFireflies[i].get_X())
+                            IIczlonYi = beta * (SwarmOfFireflies[j].get_Y() - SwarmOfFireflies[i].get_Y())
+                            Xi = SwarmOfFireflies[i].get_X() + beta * (
+                                        SwarmOfFireflies[j].get_X() - SwarmOfFireflies[i].get_X()) + ui["uX"]
+                            Yi = SwarmOfFireflies[i].get_Y() + beta * (
+                                        SwarmOfFireflies[j].get_Y() - SwarmOfFireflies[i].get_Y()) + ui["uY"]
+                            SwarmOfFireflies[i].set_Point(Xi, Yi)
+                            SwarmOfFireflies[i].set_beta(beta)
+
+                uk = GenerateRandomVector()
+                IndexOfTheMostAtractiveFirefly = FindTheMostAtractiveFirefly(SwarmOfFireflies)
+                TheMostAtractiveFirefly_X = SwarmOfFireflies[IndexOfTheMostAtractiveFirefly].get_X() + uk["uX"]
+                TheMostAtractiveFirefly_Y = SwarmOfFireflies[IndexOfTheMostAtractiveFirefly].get_Y() + uk["uY"]
+                SwarmOfFireflies[IndexOfTheMostAtractiveFirefly].set_Point(TheMostAtractiveFirefly_X,
+                                                                           TheMostAtractiveFirefly_Y)
+                if Generation == 0:
+                    Best = SwarmOfFireflies[IndexOfTheMostAtractiveFirefly]
+
+                if SwarmOfFireflies[IndexOfTheMostAtractiveFirefly].get_Z() < Best.get_Z():
+                    Best = SwarmOfFireflies[IndexOfTheMostAtractiveFirefly]
+
+                tableOfPoints.append(collectListOfPoints(SwarmOfFireflies))
+                sys.stdout.write("\r Trial:%3d , Iteration:%4d, BestFitness:%.10f" % (
+                Generation, iteration, SwarmOfFireflies[IndexOfTheMostAtractiveFirefly].get_Z()))
+                print('\n')
+
+            results.write(
+                'Generation: {0}  Xmin: {1}  Ymin: {2}  Zmin: {3}\n'.format(Generation, Best.get_X(), Best.get_Y(),
+                                                                            Best.get_Z()))
+            Generation = Generation + 1
+
+
+
+        print('The best minimum: {}\n'.format(Best.get_Z()))
+        print('For X: {0} Y: {1}\n'.format(Best.get_X(), Best.get_Y()))
