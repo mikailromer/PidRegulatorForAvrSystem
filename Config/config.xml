@@ -1,24 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <root>
     <FaAlgorithmParameters>
-        <Parameter name="NumberOfFireflies" value="20"/>
-        <Parameter name="MaxGenerations" value="100"/>
-        <Parameter name="InitialAttractiveness" value="0.1"/>
-        <Parameter name="AbsorptionCoefficient" value="1"/>
-        <Parameter name="Randomness" value="0.15"/>
-        <Parameter name="WeightingFactor" value="0.9"/>
-        <Parameter name="Step" value="0.01"/>
+        <Parameter name = "NumberOfFireflies" value = "20"/>
+        <Parameter name = "MaxGenerations" value = "100"/>
+        <Parameter name = "InitialAttractiveness" value = "0.1"/>
+        <Parameter name = "AbsorptionCoefficient" value = "1"/>
+        <Parameter name = "Randomness" value = "0.15"/>
+        <Parameter name = "WeightingFactor" value = "0.9"/>
+        <Parameter name = "FitnessFunctionCoefficient" value = "1.0"/>
+        <Parameter name="Step" value = "0.01"/>
     </FaAlgorithmParameters>
     <AVR>
-        <VoltageReference value="5"/>
-        <Amplifier Gain="10" ConstantTime="0.1"/>
-        <Exciter Gain="1" ConstantTime="0.4"/>
-        <Generator Gain="1" ConstantTime="1.0"/>
-        <Sensor Gain="1" ConstantTime="0.01"/>
+        <VoltageReference value = "5"/>
+        <Amplifier Gain = "10" ConstantTime = "0.1"/>
+        <Exciter Gain = "1" ConstantTime = "0.4"/>
+        <Generator Gain = "1" ConstantTime = "1.0"/>
+        <Sensor Gain = "1" ConstantTime = "0.01"/>
     </AVR>
     <PID>
-        <Element name="Proportional" maxValue="1.5"/>
-        <Element name="Integral" maxValue="1.0"/>
-        <Element name="Derivative" maxValue="1.0"/>
+        <Element name = "Proportional" maxValue = "1.5"/>
+        <Element name = "Integral" maxValue = "1.0"/>
+        <Element name = "Derivative" maxValue = "1.0"/>
     </PID>
 </root>

@@ -13,60 +13,62 @@ def parseConfigurationFile():
         if rootChild.tag == "FaAlgorithmParameters":
             for parameter in rootChild.findall("Parameter"):
                 if parameter.get("name") == "NumberOfFireflies":
-                    NumberOfFireflies = parameter.get("value")
+                    NumberOfFireflies = int(parameter.get("value"))
                 elif parameter.get("name") == "MaxGenerations":
-                    MaxGenerations = parameter.get("value")
+                    MaxGenerations = int(parameter.get("value"))
                 elif parameter.get("name") == "InitialAttractiveness":
-                    InitialAttractiveness = parameter.get("value")
+                    InitialAttractiveness = float(parameter.get("value"))
                 elif parameter.get("name") == "AbsorptionCoefficient":
-                    AbsorptionCoefficient = parameter.get("value")
+                    AbsorptionCoefficient = float(parameter.get("value"))
                 elif parameter.get("name") == "Randomness":
-                    Randomness = parameter.get("value")
+                    Randomness = float(parameter.get("value"))
                 elif parameter.get("name") == "WeightingFactor":
-                    WeightingFactor = parameter.get("value")
+                    WeightingFactor = float(parameter.get("value"))
+                elif parameter.get("name") == "FitnessFunctionCoefficient":
+                    FitnessFunctionCoefficient = float(parameter.get("value"))
                 elif parameter.get("name") == "Step":
-                    Step = parameter.get("value")
+                    Step = float(parameter.get("value"))
 
         elif rootChild.tag == "AVR":
             for systemElement in rootChild:
                 if systemElement.tag == "VoltageReference":
-                    voltageReference = systemElement.get("VoltageReference")
+                    voltageReference = float(systemElement.get("value"))
 
                 elif systemElement.tag == "Amplifier":
-                    Ka = systemElement.get("Gain")
-                    Ta = systemElement.get("ConstantTime")
+                    Ka = float(systemElement.get("Gain"))
+                    Ta = float(systemElement.get("ConstantTime"))
                     amplifier = {"Ka": Ka , "Ta": Ta}
 
                 elif systemElement.tag == "Exciter":
-                    Ke = systemElement.get("Gain")
-                    Te = systemElement.get("ConstantTime")
+                    Ke = float(systemElement.get("Gain"))
+                    Te = float(systemElement.get("ConstantTime"))
                     exciter = {"Ke": Ke, "Te": Te}
 
                 elif systemElement.tag == "Generator":
-                    Kg = systemElement.get("Gain")
-                    Tg = systemElement.get("ConstantTime")
+                    Kg = float(systemElement.get("Gain"))
+                    Tg = float(systemElement.get("ConstantTime"))
                     generator = {"Kg": Kg, "Tg": Tg}
 
                 elif systemElement.tag == "Sensor":
-                    Ks = systemElement.get("Gain")
-                    Ts = systemElement.get("ConstantTime")
+                    Ks = float(systemElement.get("Gain"))
+                    Ts = float(systemElement.get("ConstantTime"))
                     sensor = {"Ks": Ks, "Ts": Ts}
 
         elif rootChild.tag == "PID":
             for PidElement in rootChild:
                 if PidElement.get("name") == "Proportional":
-                    maxKp = systemElement.get("maxValue")
+                    maxKp = float(PidElement.get("maxValue"))
 
                 elif PidElement.get("name") == "Integral":
-                    maxKi = systemElement.get("maxValue")
+                    maxKi = float(PidElement.get("maxValue"))
 
                 elif PidElement.get("name") == "Derivative":
-                    maxKd = systemElement.get("maxValue")
+                    maxKd = float(PidElement.get("maxValue"))
 
             PID = {"Kp": maxKp, "Ki": maxKi, "Kd": maxKd}
 
         FaAlgorithm= {"N":NumberOfFireflies, "T":MaxGenerations, "beta0": InitialAttractiveness,\
-                      "gamma": AbsorptionCoefficient, "delta": WeightingFactor, "step": Step }
+                      "gamma": AbsorptionCoefficient, "delta": WeightingFactor, "ro": FitnessFunctionCoefficient, "step": Step }
 
     return FaAlgorithm, amplifier, exciter, generator, sensor, voltageReference, PID
 
@@ -87,15 +89,15 @@ if __name__ == '__main__':
     faAlgorithmParams, amplifierParams, exciterParams,\
     generatorParams, sensorParams, voltageReference, pidGainsThresholds =parseConfigurationFile()
 
-    Kp = 1.3
-    Ki= 0.7
-    Kd = 0.1
+    # Kp = 1.3
+    # Ki= 0.7
+    # Kd = 0.1
     # Laplace's transform for elements of AVR system
-    Gpid = Kp + tf([Ki],[1,0]) + tf([Kd,0],[1])
-    Ga = tf([float(amplifierParams["Ka"])], [float(amplifierParams["Ta"]), 1])
-    Ge = tf([float(exciterParams["Ke"])], [float(exciterParams["Te"]), 1])
-    Gg = tf([float(generatorParams["Kg"])], [float(generatorParams["Tg"]), 1])
-    Gs = tf([float(sensorParams["Ks"])], [float(sensorParams["Ts"]), 1])
+#    Gpid = Kp + tf([Ki],[1,0]) + tf([Kd,0],[1])
+    Ga = tf([amplifierParams["Ka"]], [amplifierParams["Ta"], 1])
+    Ge = tf([exciterParams["Ke"]], [exciterParams["Te"], 1])
+    Gg = tf([generatorParams["Kg"]], [generatorParams["Tg"], 1])
+    Gs = tf([sensorParams["Ks"]], [sensorParams["Ts"], 1])
 
     swarmOfFireflies = createSwarmOfFireflies(faAlgorithmParams["N"], pidGainsThresholds, faAlgorithmParams["beta0"])
     for t in range(faAlgorithmParams["T"]):
@@ -103,7 +105,9 @@ if __name__ == '__main__':
             Gpid = firefly.get_Kp() + tf([firefly.get_Ki()],[1,0]) + tf([firefly.get_Kd(),0],[1])
             systemTransferFunction = (Gpid * Ga * Ge * Gg) / (1 + (Gpid * Ga * Ge * Gg))
             T, Vout = step_response(systemTransferFunction * voltageReference)
+            Ess=np.abs(voltageReference- Vout[len(Vout)-1])
             M, Tr, Ts = step_info(T, Vout)
+
 
 
 

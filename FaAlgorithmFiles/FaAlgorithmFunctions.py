@@ -1,5 +1,6 @@
 import numpy as np
 from FaAlgorithmFiles.Firefly import Firefly
+import sympy
 
 
 def createSwarmOfFireflies(NumberOfFireflies, pidGainsThresholds, beta0):
@@ -11,7 +12,8 @@ def createSwarmOfFireflies(NumberOfFireflies, pidGainsThresholds, beta0):
         SwarmOfFireflies.append(Firefly(Kp, Ki, Kd, beta0))
     return SwarmOfFireflies
 
-def fitnessFunction():
+#def fitnessFunction(T, Vout, M, Ess, Ts, Tr, delta, ro ):
+
 
 
 def ComputeDistanceBeetweenTwoObjects(Firefly_I, Firefly_J):
