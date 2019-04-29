@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ElementTree
 from control import tf,step_response
 from os import path, getcwd, mkdir
 import matplotlib.pyplot as plt
+import numpy as np
 
 def parseConfigurationFile():
     filePath=path.join(getcwd(), "config", "config.xml")
@@ -76,8 +77,15 @@ if __name__ == '__main__':
 
     systemTransferFunction= (Gpid *Ga * Ge * Gg)/(1 + (Gpid *Ga * Ge * Gg))
     T, yout= step_response(systemTransferFunction*voltageReference)
-    M, Tr, Ts = step_info(T,yout)
-    plt.plot(T,yout)
+    interpTime = np.array([])
+    t = 0
+    while t < T[len(T)-1]:
+        interpTime = np.append(interpTime, t)
+        t = t + 0.01
+
+    interpVout = np.interp(interpTime,T,yout)
+    M, Tr, Ts = step_info(interpTime,interpVout)
+    plt.plot(interpTime,interpVout)
     plt.title("AVR Regulation System's Response")
     plt.xlabel("Time [s]")
     plt.xlabel("Output Voltage [V]")
