@@ -8,7 +8,7 @@
         <Parameter name = "Randomness" value = "0.15"/>
         <Parameter name = "WeightingFactor" value = "0.9"/>
         <Parameter name = "FitnessFunctionCoefficient" value = "1.0"/>
-        <Parameter name="Step" value = "0.01"/>
+        <Parameter name = "Step" value = "0.01"/>
     </FaAlgorithmParameters>
     <AVR>
         <VoltageReference value = "5"/>

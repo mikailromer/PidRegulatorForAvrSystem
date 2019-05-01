@@ -2,7 +2,10 @@ import xml.etree.ElementTree as ElementTree
 import matplotlib.pyplot as plt
 from control import tf,step_response
 from os import path, getcwd, mkdir
+import sys
 from FaAlgorithmFiles.FaAlgorithmFunctions import *
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def parseConfigurationFile():
@@ -67,13 +70,13 @@ def parseConfigurationFile():
 
             PID = {"Kp": maxKp, "Ki": maxKi, "Kd": maxKd}
 
-        FaAlgorithm= {"N":NumberOfFireflies, "T":MaxGenerations, "beta0": InitialAttractiveness,\
+        FaAlgorithm= {"N":NumberOfFireflies, "T":MaxGenerations, "beta0": InitialAttractiveness,"alfa": Randomness,\
                       "gamma": AbsorptionCoefficient, "delta": WeightingFactor, "ro": FitnessFunctionCoefficient, "step": Step }
 
     return FaAlgorithm, amplifier, exciter, generator, sensor, voltageReference, PID
 
 def step_info(t,Vout):
-    overshoot =(Vout.max()/Vout[-1]-1)*100
+    overshoot =(Vout.max()/Vout[-1]-1)
     risingTime = t[next(i for i in range(0,len(Vout)-1) if Vout[i]>Vout[-1]*.90)]-t[0]
     settingTime = t[next(len(Vout)-i for i in range(2,len(Vout)-1) if abs(Vout[-i]/Vout[-1])>1.02)]-t[0]
     print("OS: %f%s"%(overshoot,'%'))
@@ -81,8 +84,6 @@ def step_info(t,Vout):
     print("Ts: %fs"%(settingTime))
 
     return overshoot, risingTime, settingTime
-
-
 
 if __name__ == '__main__':
 
@@ -98,27 +99,56 @@ if __name__ == '__main__':
     Ge = tf([exciterParams["Ke"]], [exciterParams["Te"], 1])
     Gg = tf([generatorParams["Kg"]], [generatorParams["Tg"], 1])
     Gs = tf([sensorParams["Ks"]], [sensorParams["Ts"], 1])
-
+    tableOfPoints=[]
+    collectDictionaryOfBestGains = np.array([])
+    bestFirefly = None
     swarmOfFireflies = createSwarmOfFireflies(faAlgorithmParams["N"], pidGainsThresholds, faAlgorithmParams["beta0"])
     for t in range(faAlgorithmParams["T"]):
-        for firefly in swarmOfFireflies:
-            Gpid = firefly.get_Kp() + tf([firefly.get_Ki()],[1,0]) + tf([firefly.get_Kd(),0],[1])
-            systemTransferFunction = (Gpid * Ga * Ge * Gg) / (1 + (Gpid * Ga * Ge * Gg))
-            T, Vout = step_response(systemTransferFunction * voltageReference)
-            Ess=np.abs(voltageReference- Vout[len(Vout)-1])
-            M, Tr, Ts = step_info(T, Vout)
+        for i in range(len(swarmOfFireflies)):
+            for j in range(len(swarmOfFireflies)):
+                calculateFireflyLigthIntensivity(swarmOfFireflies[i], Ga, Ge, Gg, voltageReference, faAlgorithmParams["ro"])
+                calculateFireflyLigthIntensivity(swarmOfFireflies[j], Ga, Ge, Gg, voltageReference, faAlgorithmParams["ro"])
+                if swarmOfFireflies[j].getLigthIntensivityValue() > swarmOfFireflies[i].getLigthIntensivityValue():
+                    Rij = ComputeDistanceBeetweenTwoObjects(swarmOfFireflies[i],swarmOfFireflies[j])
+#                    beta = AtractivenessFunction(faAlgorithmParams["beta0"],Rij,faAlgorithmParams["gamma"])
+                    swarmOfFireflies[i].set_beta(AtractivenessFunction(faAlgorithmParams["beta0"],Rij,faAlgorithmParams["gamma"]))
+                    u = GenerateRandomVector()
+                    KPi = swarmOfFireflies[i].get_Kp() + swarmOfFireflies[i].get_beta() *(swarmOfFireflies[j].get_Kp()\
+                                                                - swarmOfFireflies[i].get_Kp()) + faAlgorithmParams["alfa"]*u["Kp"]
+                    KIi = swarmOfFireflies[i].get_Ki() + swarmOfFireflies[i].get_beta() * (swarmOfFireflies[j].get_Ki() \
+                                                                 - swarmOfFireflies[i].get_Ki()) + faAlgorithmParams["alfa"] * u["Ki"]
+                    KDi = swarmOfFireflies[i].get_Kd() + swarmOfFireflies[i].get_beta() * (swarmOfFireflies[j].get_Kd() \
+                                                                 - swarmOfFireflies[i].get_Kd()) + faAlgorithmParams["alfa"] * u["Kd"]
+                    swarmOfFireflies[i].set_PidGains(KPi, KIi, KDi)
+                    Rij = ComputeDistanceBeetweenTwoObjects(swarmOfFireflies[i], swarmOfFireflies[j])
+                   # beta = AtractivenessFunction(faAlgorithmParams["beta0"], Rij, faAlgorithmParams["gamma"])
+                    swarmOfFireflies[i].set_beta(AtractivenessFunction(faAlgorithmParams["beta0"], Rij, faAlgorithmParams["gamma"]))
+
+        uk = GenerateRandomVector()
+        IndexOfTheMostAtractiveFirefly = FindTheMostAtractiveFirefly(swarmOfFireflies)
+        TheMostAtractiveFirefly_Kp = swarmOfFireflies[IndexOfTheMostAtractiveFirefly].get_Kp() + uk["Kp"]
+        TheMostAtractiveFirefly_Ki = swarmOfFireflies[IndexOfTheMostAtractiveFirefly].get_Ki() + uk["Ki"]
+        TheMostAtractiveFirefly_Kd = swarmOfFireflies[IndexOfTheMostAtractiveFirefly].get_Kd() + uk["Kd"]
+        swarmOfFireflies[IndexOfTheMostAtractiveFirefly].set_PidGains(TheMostAtractiveFirefly_Kp,
+                                                                   TheMostAtractiveFirefly_Ki, TheMostAtractiveFirefly_Kd )
+        calculateFireflyLigthIntensivity(swarmOfFireflies[IndexOfTheMostAtractiveFirefly],Ga,Ge,Gg,voltageReference,faAlgorithmParams["ro"])
+        Best = swarmOfFireflies[FindTheMostAtractiveFirefly(swarmOfFireflies)]
+        collectDictionaryOfBestGains = np.append(collectDictionaryOfBestGains, Best.get_PidGains())
+        #tableOfPoints.append(collectListOfPoints(swarmOfFireflies))
+        # sys.stdout.write("\rGeneration:%4d, BestFitness:%.10f" % (
+        #     t, swarmOfFireflies[IndexOfTheMostAtractiveFirefly].getLigthIntensivityValue()))
+
+        print('\n')
 
 
 
 
-    systemTransferFunction= (Gpid *Ga * Ge * Gg)/(1 + (Gpid *Ga * Ge * Gg))
-    T, Vout= step_response(systemTransferFunction*voltageReference)
-    M, Tr, Ts = step_info(T,Vout)
-    plt.plot(T,Vout)
+
+    plt.plot(Best.getResponseTimeVector(),Best.getResponseOutputVoltageVector())
     plt.title("AVR Regulation System's Response")
     plt.xlabel("Time [s]")
     plt.xlabel("Output Voltage [V]")
-    plt.xlim((0,T[len(T)-1]))
+    plt.xlim((0,Best.getResponseTimeVector()[len(Best.getResponseTimeVector())-1]))
     plt.grid()
     plt.show()
 
