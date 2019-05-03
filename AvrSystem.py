@@ -106,8 +106,8 @@ if __name__ == '__main__':
     for t in range(faAlgorithmParams["T"]):
         for i in range(len(swarmOfFireflies)):
             for j in range(len(swarmOfFireflies)):
-                calculateFireflyLigthIntensivity(swarmOfFireflies[i], Ga, Ge, Gg, voltageReference, faAlgorithmParams["ro"])
-                calculateFireflyLigthIntensivity(swarmOfFireflies[j], Ga, Ge, Gg, voltageReference, faAlgorithmParams["ro"])
+                calculateFireflyLigthIntensivity(swarmOfFireflies[i], Ga, Ge, Gg, Gs, voltageReference, faAlgorithmParams["ro"])
+                calculateFireflyLigthIntensivity(swarmOfFireflies[j], Ga, Ge, Gg, Gs, voltageReference, faAlgorithmParams["ro"])
                 if swarmOfFireflies[j].getLigthIntensivityValue() > swarmOfFireflies[i].getLigthIntensivityValue():
                     Rij = ComputeDistanceBeetweenTwoObjects(swarmOfFireflies[i],swarmOfFireflies[j])
 #                    beta = AtractivenessFunction(faAlgorithmParams["beta0"],Rij,faAlgorithmParams["gamma"])
@@ -131,7 +131,7 @@ if __name__ == '__main__':
         TheMostAtractiveFirefly_Kd = swarmOfFireflies[IndexOfTheMostAtractiveFirefly].get_Kd() + uk["Kd"]
         swarmOfFireflies[IndexOfTheMostAtractiveFirefly].set_PidGains(TheMostAtractiveFirefly_Kp,
                                                                    TheMostAtractiveFirefly_Ki, TheMostAtractiveFirefly_Kd )
-        calculateFireflyLigthIntensivity(swarmOfFireflies[IndexOfTheMostAtractiveFirefly],Ga,Ge,Gg,voltageReference,faAlgorithmParams["ro"])
+        calculateFireflyLigthIntensivity(swarmOfFireflies[IndexOfTheMostAtractiveFirefly],Ga,Ge,Gg, Gs, voltageReference,faAlgorithmParams["ro"])
         Best = swarmOfFireflies[FindTheMostAtractiveFirefly(swarmOfFireflies)]
         collectDictionaryOfBestGains = np.append(collectDictionaryOfBestGains, Best.get_PidGains())
         #tableOfPoints.append(collectListOfPoints(swarmOfFireflies))

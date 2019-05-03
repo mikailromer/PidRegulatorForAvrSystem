@@ -10,6 +10,7 @@ class Firefly(object):
         self.__ligthIntensivity = None
         self.__beta = beta0
         self.__PidControllerTransferFunction = self.get_Kp() + tf([self.get_Ki()],[1,0]) + tf([self.get_Kd(),0],[1])
+        self.__AvrSystemTransferFunction = None
         self.__responseTimeVector = None
         self.__responseOutputVoltageVector = None
         self.__Ess = None
@@ -38,6 +39,9 @@ class Firefly(object):
 
     def getPidControllerTransferFunction(self):
         return self.__PidControllerTransferFunction
+
+    def getAvrSystemTransferFunction(self):
+        return self.__AvrSystemTransferFunction
 
     def getEss(self):
         return self.__Ess
@@ -95,10 +99,11 @@ class Firefly(object):
         if self.get_Ki() < 0:
             self.__PidGains = {"Kp": Kp, "Ki": Ki, "Kd": 0}
 
-
-
     def setPidControllerTransferFunction(self, Kp, Ki, Kd):
         self.__PidControllerTransferFunction = Kp+ tf([Ki], [1, 0]) + tf([Kd, 0], [1])
+
+    def setAvrSystemTransferFunction(self, Gpid, Ga, Ge, Gg, Gs):
+        self.__AvrSystemTransferFunction = (Gpid * Ga * Ge * Gg) / (1 + (Gpid * Ga * Ge * Gg * Gs))
 
     def setAvrSystemResponseParameters(self, Ess, M, Tr, Ts, responseTimeVector, responseOutputVoltageVector):
         self.__Ess = Ess
