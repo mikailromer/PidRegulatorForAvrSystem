@@ -1,5 +1,4 @@
 import xml.etree.ElementTree as ElementTree
-import matplotlib.pyplot as plt
 from control import tf,step_response
 from os import path, getcwd, mkdir
 import sys

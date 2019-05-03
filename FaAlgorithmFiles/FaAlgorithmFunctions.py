@@ -1,8 +1,7 @@
 import numpy as np
 from FaAlgorithmFiles.Firefly import Firefly
-from control import step_response, pzmap
-import sympy
-import matplotlib.pyplot as plt
+from control import step_response
+from control import pole as Pole
 
 
 def createSwarmOfFireflies(NumberOfFireflies, pidGainsThresholds, beta0):
@@ -25,7 +24,8 @@ def interpolationOfOutputVoltage(T, Vout):
     return interpTime, interpVout
 
 def checkAvrSystemStability(firefly):
-    poles, zeros = pzmap(firefly.getAvrSystemTransferFunction())
+
+    poles = Pole(firefly.getAvrSystemTransferFunction())
     stabilityCondition = True
     for pole in poles:
         if (pole.real > 0):
@@ -35,13 +35,6 @@ def checkAvrSystemStability(firefly):
     return stabilityCondition
 
 def makeAvrSystemStable(Ga,Ge,Gg,Gs, firefly):
-
-    # poles, zeros = pzmap(firefly.getAvrSystemTransferFunction())
-    # stabilityCondition = True
-    # for pole in poles:
-    #     if(pole.real>0):
-    #         stabilityCondition=False
-    #         break
     stabilityCondition = checkAvrSystemStability(firefly)
     while stabilityCondition==False:
         Kp = round(np.random.uniform(0, (firefly.getPidGainsThresholds())["Kp"]), 3)
@@ -51,20 +44,6 @@ def makeAvrSystemStable(Ga,Ge,Gg,Gs, firefly):
         firefly.setPidControllerTransferFunction(firefly.get_Kp(), firefly.get_Ki(), firefly.get_Kd())
         firefly.setAvrSystemTransferFunction(firefly.getPidControllerTransferFunction(), Ga, Ge, Gg, Gs)
         stabilityCondition = checkAvrSystemStability(firefly)
-        # poles, zeros = pzmap(firefly.getAvrSystemTransferFunction())
-        # stabilityCondition = True
-        # for pole in poles:
-        #     if (pole.real > 0):
-        #         stabilityCondition = False
-        #         break
-
-    return True
-
-
-   # plt.show()
-    print('Debug')
-
-
 
 def ITAE(T, Vout):
     integral = 0
@@ -80,7 +59,6 @@ def fitnessFunction(T, Vout, M, Ess, Ts, Tr, ro):
     elementI =ITAE(T, Vout)
     elementII = (1 - np.exp(ro))*(M + Ess)
     elementIII = np.exp(ro)*(Ts - Tr)
-
     fitnessFunctionValue = ITAE(T, Vout) *((1 - np.exp(ro)) *(M + Ess) + np.exp(ro)*(Ts - Tr))
     return fitnessFunctionValue
 
@@ -91,22 +69,16 @@ def step_info(t,Vout,firefly):
     overshoot =(Vout.max()/Vout[-1]-1)
     risingTime = None
     # a =next(i for i in range(0,len(Vout)-1) if Vout[i]>Vout[-1]*.90)
-
     #risingTime = t[next(i for i in range(0,len(Vout)-1) if Vout[i]>Vout[-1]*.90)]-t[0]
     for i in range(0, len(Vout) -1):
         if Vout[i] > Vout[-1] * .90:
             risingTime = t[i] -t[0]
-
-    if risingTime==None:
-        z,b = pzmap(firefly.getAvrSystemTransferFunction())
-        plt.plot(t,Vout)
-        plt.show()
+    # if risingTime==None:
+    #     z,b = pzmap(firefly.getAvrSystemTransferFunction())
+    #     plt.plot(t,Vout)
+    #     plt.show()
     for i in range(2, len(Vout) - 1):
-        ul=(Vout[-i] / Vout[-1])
-        ul2 =abs((Vout[-i] -Vout[-1])/ Vout[-1]) * 100
-        ul=(Vout[-i] / Vout[-1])
         if (abs((Vout[-i] - Vout[-1]) / Vout[-1]) > 0.02):
-    #        IIcond = True
             settingTime = t[len(Vout)-i]-t[0]
 
     #     if abs((Vout[-i] / Vout[-1])) > 1.02:
@@ -124,6 +96,7 @@ def step_info(t,Vout,firefly):
 def calculateFireflyLigthIntensivity(firefly, Ga, Ge, Gg,Gs, voltageReference, ro):
     firefly.setPidControllerTransferFunction(firefly.get_Kp(), firefly.get_Ki(), firefly.get_Kd())
     firefly.setAvrSystemTransferFunction(firefly.getPidControllerTransferFunction(),Ga,Ge,Gg, Gs)
+    makeAvrSystemStable(Ga,Ge,Gg,Gs,firefly)
     T, Vout = step_response(firefly.getAvrSystemTransferFunction() * voltageReference)
     interpTime, interpVout = interpolationOfOutputVoltage(T, Vout)
     Ess = np.abs(voltageReference - interpVout[len(interpVout) - 1])

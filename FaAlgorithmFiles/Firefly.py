@@ -114,7 +114,7 @@ class Firefly(object):
         self.__responseOutputVoltageVector= responseOutputVoltageVector
 
     def ligthIntensivity(self, fitnessFunctionValue):
-        return np.exp(-fitnessFunctionValue)
+        return 1/((0.001*fitnessFunctionValue)**2 +1)
 
 
 
