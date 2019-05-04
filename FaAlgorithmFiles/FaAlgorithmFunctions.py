@@ -121,10 +121,10 @@ def AtractivenessFunction(beta0,Rij,Lambda):
     result=beta0*np.exp(-Lambda*(Rij**2))
     return result
 
-def GenerateRandomVector():
-    uKp = round(np.random.uniform(0, 1), 3) -0.5
-    uKi = round(np.random.uniform(0, 1), 3) -0.5
-    uKd = round(np.random.uniform(0, 1), 3) -0.5
+def GenerateRandomVector(pidGainsThresholds):
+    uKp = round(np.random.uniform(0, pidGainsThresholds["Kp"]) -0.5, 3)
+    uKi = round(np.random.uniform(0, pidGainsThresholds["Ki"]) -0.5, 3)
+    uKd = round(np.random.uniform(0, pidGainsThresholds["Kd"]) -0.5, 3)
     RandomVector = {"Kp": uKp, "Ki": uKi, "Kd":uKd}
     return RandomVector
 
