@@ -1,10 +1,11 @@
 import xml.etree.ElementTree as ElementTree
-from control import tf,step_response
+from control import tf
 from os import path, getcwd, mkdir
-import sys
 from FaAlgorithmFiles.FaAlgorithmFunctions import *
 import matplotlib.pyplot as plt
 import numpy as np
+from datetime import datetime
+
 
 
 def parseConfigurationFile():
@@ -74,82 +75,92 @@ def parseConfigurationFile():
 
     return FaAlgorithm, amplifier, exciter, generator, sensor, voltageReference, PID
 
-def step_info(t,Vout):
-    overshoot =(Vout.max()/Vout[-1]-1)
-    risingTime = t[next(i for i in range(0,len(Vout)-1) if Vout[i]>Vout[-1]*.90)]-t[0]
-    settingTime = t[next(len(Vout)-i for i in range(2,len(Vout)-1) if abs(Vout[-i]/Vout[-1])>1.02)]-t[0]
-    print("OS: %f%s"%(overshoot,'%'))
-    print("Tr: %fs"%(risingTime))
-    print("Ts: %fs"%(settingTime))
+# def step_info(t,Vout):
+#     overshoot =(Vout.max()/Vout[-1]-1)
+#     risingTime = t[next(i for i in range(0,len(Vout)-1) if Vout[i]>Vout[-1]*.90)]-t[0]
+#     settingTime = t[next(len(Vout)-i for i in range(2,len(Vout)-1) if abs(Vout[-i]/Vout[-1])>1.02)]-t[0]
+#     print("OS: %f%s"%(overshoot,'%'))
+#     print("Tr: %fs"%(risingTime))
+#     print("Ts: %fs"%(settingTime))
 
-    return overshoot, risingTime, settingTime
+    #return overshoot, risingTime, settingTime
 
 if __name__ == '__main__':
 
-    faAlgorithmParams, amplifierParams, exciterParams,\
-    generatorParams, sensorParams, voltageReference, pidGainsThresholds =parseConfigurationFile()
+    # Prepare new directory for log file
+    logFileDir = path.join(getcwd(),"logs")
+    if path.isdir(logFileDir) is False:
+        mkdir(logFileDir)
 
-    # Kp = 1.3
-    # Ki= 0.7
-    # Kd = 0.1
-    # Laplace's transform for elements of AVR system
-#    Gpid = Kp + tf([Ki],[1,0]) + tf([Kd,0],[1])
-    Ga = tf([amplifierParams["Ka"]], [amplifierParams["Ta"], 1])
-    Ge = tf([exciterParams["Ke"]], [exciterParams["Te"], 1])
-    Gg = tf([generatorParams["Kg"]], [generatorParams["Tg"], 1])
-    Gs = tf([sensorParams["Ks"]], [sensorParams["Ts"], 1])
-    tableOfPoints=[]
-    collectDictionaryOfBestGains = np.array([])
-    bestFirefly = None
-    swarmOfFireflies = createSwarmOfFireflies(faAlgorithmParams["N"], pidGainsThresholds, faAlgorithmParams["beta0"])
-    for t in range(faAlgorithmParams["T"]):
-        for i in range(len(swarmOfFireflies)):
-            for j in range(len(swarmOfFireflies)):
-                calculateFireflyLigthIntensivity(swarmOfFireflies[i], Ga, Ge, Gg, Gs, voltageReference, faAlgorithmParams["ro"])
-                calculateFireflyLigthIntensivity(swarmOfFireflies[j], Ga, Ge, Gg, Gs, voltageReference, faAlgorithmParams["ro"])
-                if swarmOfFireflies[j].getLigthIntensivityValue() > swarmOfFireflies[i].getLigthIntensivityValue():
-                    Rij = ComputeDistanceBeetweenTwoObjects(swarmOfFireflies[i],swarmOfFireflies[j])
-#                    beta = AtractivenessFunction(faAlgorithmParams["beta0"],Rij,faAlgorithmParams["gamma"])
-                    swarmOfFireflies[i].set_beta(AtractivenessFunction(faAlgorithmParams["beta0"],Rij,faAlgorithmParams["gamma"]))
-                    u = GenerateRandomVector()
-                    KPi = swarmOfFireflies[i].get_Kp() + swarmOfFireflies[i].get_beta() *(swarmOfFireflies[j].get_Kp()\
-                                                                - swarmOfFireflies[i].get_Kp()) + faAlgorithmParams["alfa"]*u["Kp"]
-                    KIi = swarmOfFireflies[i].get_Ki() + swarmOfFireflies[i].get_beta() * (swarmOfFireflies[j].get_Ki() \
-                                                                 - swarmOfFireflies[i].get_Ki()) + faAlgorithmParams["alfa"] * u["Ki"]
-                    KDi = swarmOfFireflies[i].get_Kd() + swarmOfFireflies[i].get_beta() * (swarmOfFireflies[j].get_Kd() \
-                                                                 - swarmOfFireflies[i].get_Kd()) + faAlgorithmParams["alfa"] * u["Kd"]
-                    swarmOfFireflies[i].set_PidGains(KPi, KIi, KDi)
-                    Rij = ComputeDistanceBeetweenTwoObjects(swarmOfFireflies[i], swarmOfFireflies[j])
-                   # beta = AtractivenessFunction(faAlgorithmParams["beta0"], Rij, faAlgorithmParams["gamma"])
-                    swarmOfFireflies[i].set_beta(AtractivenessFunction(faAlgorithmParams["beta0"], Rij, faAlgorithmParams["gamma"]))
+    time = datetime.now()
+    dateString = "".join((time.strftime("%Y"), time.strftime("%m"), time.strftime("%d"),\
+         "_", time.strftime("%H"), time.strftime("%M"), time.strftime("%S")))
+    logFilePath = path.join(getcwd(),"logs","logFile-{0}.log".format(dateString))
+    with open(logFilePath,"w") as logFile:
+        faAlgorithmParams, amplifierParams, exciterParams,\
+        generatorParams, sensorParams, voltageReference, pidGainsThresholds =parseConfigurationFile()
+        # Laplace's transform for elements of AVR system
+        Ga = tf([amplifierParams["Ka"]], [amplifierParams["Ta"], 1])
+        Ge = tf([exciterParams["Ke"]], [exciterParams["Te"], 1])
+        Gg = tf([generatorParams["Kg"]], [generatorParams["Tg"], 1])
+        Gs = tf([sensorParams["Ks"]], [sensorParams["Ts"], 1])
+        tableOfPoints=[]
+        collectDictionaryOfBestGains = np.array([])
+        bestFirefly = None
+        swarmOfFireflies = createSwarmOfFireflies(faAlgorithmParams["N"], pidGainsThresholds, faAlgorithmParams["beta0"])
+        alfa = faAlgorithmParams["alfa"]
+        for t in range(faAlgorithmParams["T"]):
+            for i in range(len(swarmOfFireflies)):
+                for j in range(len(swarmOfFireflies)):
+                    calculateFireflyLigthIntensivity(swarmOfFireflies[i], Ga, Ge, Gg, Gs, voltageReference, faAlgorithmParams["ro"])
+                    calculateFireflyLigthIntensivity(swarmOfFireflies[j], Ga, Ge, Gg, Gs, voltageReference, faAlgorithmParams["ro"])
+                    if swarmOfFireflies[j].getLigthIntensivityValue() > swarmOfFireflies[i].getLigthIntensivityValue():
+                        Rij = ComputeDistanceBeetweenTwoObjects(swarmOfFireflies[i],swarmOfFireflies[j])
+                        particleAtractiveness = AtractivenessFunction(faAlgorithmParams["beta0"],Rij,faAlgorithmParams["gamma"])
+                        #swarmOfFireflies[i].set_beta(AtractivenessFunction(faAlgorithmParams["beta0"],Rij,faAlgorithmParams["gamma"]))
+                        u = GenerateRandomVector(swarmOfFireflies[i].getPidGainsThresholds())
 
-        uk = GenerateRandomVector()
-        IndexOfTheMostAtractiveFirefly = FindTheMostAtractiveFirefly(swarmOfFireflies)
-        TheMostAtractiveFirefly_Kp = swarmOfFireflies[IndexOfTheMostAtractiveFirefly].get_Kp() + uk["Kp"]
-        TheMostAtractiveFirefly_Ki = swarmOfFireflies[IndexOfTheMostAtractiveFirefly].get_Ki() + uk["Ki"]
-        TheMostAtractiveFirefly_Kd = swarmOfFireflies[IndexOfTheMostAtractiveFirefly].get_Kd() + uk["Kd"]
-        swarmOfFireflies[IndexOfTheMostAtractiveFirefly].set_PidGains(TheMostAtractiveFirefly_Kp,
-                                                                   TheMostAtractiveFirefly_Ki, TheMostAtractiveFirefly_Kd )
-        calculateFireflyLigthIntensivity(swarmOfFireflies[IndexOfTheMostAtractiveFirefly],Ga,Ge,Gg, Gs, voltageReference,faAlgorithmParams["ro"])
-        Best = swarmOfFireflies[FindTheMostAtractiveFirefly(swarmOfFireflies)]
-        collectDictionaryOfBestGains = np.append(collectDictionaryOfBestGains, Best.get_PidGains())
-        #tableOfPoints.append(collectListOfPoints(swarmOfFireflies))
-        # sys.stdout.write("\rGeneration:%4d, BestFitness:%.10f" % (
-        #     t, swarmOfFireflies[IndexOfTheMostAtractiveFirefly].getLigthIntensivityValue()))
+                        KPi = swarmOfFireflies[i].get_Kp() + particleAtractiveness *(swarmOfFireflies[j].get_Kp()\
+                                                                    - swarmOfFireflies[i].get_Kp()) + alfa*u["Kp"]
+                        KIi = swarmOfFireflies[i].get_Ki() + particleAtractiveness * (swarmOfFireflies[j].get_Ki() \
+                                                                     - swarmOfFireflies[i].get_Ki()) + alfa * u["Ki"]
+                        KDi = swarmOfFireflies[i].get_Kd() + particleAtractiveness * (swarmOfFireflies[j].get_Kd() \
+                                                                     - swarmOfFireflies[i].get_Kd()) + alfa * u["Kd"]
+                        swarmOfFireflies[i].set_PidGains(KPi, KIi, KDi)
+                        Rij = ComputeDistanceBeetweenTwoObjects(swarmOfFireflies[i], swarmOfFireflies[j])
+                        particleAtractiveness = AtractivenessFunction(faAlgorithmParams["beta0"], Rij,
+                                                                      faAlgorithmParams["gamma"])
 
-        print('\n')
+            uk = GenerateRandomVector(pidGainsThresholds)
+            IndexOfTheMostAtractiveFirefly = FindTheMostAtractiveFirefly(swarmOfFireflies)
+            TheMostAtractiveFirefly_Kp = swarmOfFireflies[IndexOfTheMostAtractiveFirefly].get_Kp() + uk["Kp"]
+            TheMostAtractiveFirefly_Ki = swarmOfFireflies[IndexOfTheMostAtractiveFirefly].get_Ki() + uk["Ki"]
+            TheMostAtractiveFirefly_Kd = swarmOfFireflies[IndexOfTheMostAtractiveFirefly].get_Kd() + uk["Kd"]
+            swarmOfFireflies[IndexOfTheMostAtractiveFirefly].set_PidGains(TheMostAtractiveFirefly_Kp,
+                                                                       TheMostAtractiveFirefly_Ki, TheMostAtractiveFirefly_Kd )
+            calculateFireflyLigthIntensivity(swarmOfFireflies[IndexOfTheMostAtractiveFirefly],Ga,Ge,Gg, Gs, voltageReference,faAlgorithmParams["ro"])
+            Best = swarmOfFireflies[FindTheMostAtractiveFirefly(swarmOfFireflies)]
+            collectDictionaryOfBestGains = np.append(collectDictionaryOfBestGains, Best.get_PidGains())
+            alfa = alfa*faAlgorithmParams["delta"]*np.exp(np.sqrt(t))
+            #tableOfPoints.append(collectListOfPoints(swarmOfFireflies))
+            #TODO: Change logfile format and print also values of PID gains: Kp, Ki, Kd
+            #TODO: Check a behaviour of algorithm, if you increase value of beta coefficient
+            #
 
+            logFile.write("Generation: %d, Best Firefly's index: %d, Best Fitness: %0.4f, Time: %f".format(\
+                t, FindTheMostAtractiveFirefly(swarmOfFireflies),\
+                Best.getFitnessFunctionValue(),(datetime.now() - time).total_seconds()))
+            print("Generation: %d, Best Firefly's index: %d, Best Fitness: %0.4f, Time: %f" % (\
+                t, FindTheMostAtractiveFirefly(swarmOfFireflies),\
+                Best.getFitnessFunctionValue(),(datetime.now() - time).total_seconds()))
 
-
-
-
-    plt.plot(Best.getResponseTimeVector(),Best.getResponseOutputVoltageVector())
-    plt.title("AVR Regulation System's Response")
-    plt.xlabel("Time [s]")
-    plt.xlabel("Output Voltage [V]")
-    plt.xlim((0,Best.getResponseTimeVector()[len(Best.getResponseTimeVector())-1]))
-    plt.grid()
-    plt.show()
+        plt.plot(Best.getResponseTimeVector(),Best.getResponseOutputVoltageVector())
+        plt.title("AVR Regulation System's Response")
+        plt.xlabel("Time [s]")
+        plt.xlabel("Output Voltage [V]")
+        plt.xlim((0,Best.getResponseTimeVector()[len(Best.getResponseTimeVector())-1]))
+        plt.grid()
+        plt.show()
 
 
 

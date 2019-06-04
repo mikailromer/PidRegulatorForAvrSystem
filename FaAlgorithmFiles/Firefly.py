@@ -55,8 +55,8 @@ class Firefly(object):
     def getM(self):
         return self.__M
 
-    def get_beta(self):
-        return self.__beta
+    # def get_beta(self):
+    #     return self.__beta
 
     def getResponseTimeVector(self):
         return self.__responseTimeVector
@@ -73,8 +73,8 @@ class Firefly(object):
     def setLigthIntensivity(self):
         self.__ligthIntensivity = self.ligthIntensivity(self.__fitnessFunctionValue)
 
-    def set_beta(self,beta):
-        self.__beta=beta
+    # def set_beta(self,beta):
+    #     self.__beta=beta
 
     def set_PidGains(self, Kp, Ki, Kd):
 
@@ -114,7 +114,7 @@ class Firefly(object):
         self.__responseOutputVoltageVector= responseOutputVoltageVector
 
     def ligthIntensivity(self, fitnessFunctionValue):
-        return 1/((0.001*fitnessFunctionValue)**2 +1)
+        return 1/((fitnessFunctionValue/10)**2 +1)
 
 
 
