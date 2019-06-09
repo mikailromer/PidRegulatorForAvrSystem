@@ -95,7 +95,7 @@ if __name__ == '__main__':
     time = datetime.now()
     dateString = "".join((time.strftime("%Y"), time.strftime("%m"), time.strftime("%d"),\
          "_", time.strftime("%H"), time.strftime("%M"), time.strftime("%S")))
-    logFilePath = path.join(getcwd(),"logs","logFile-{0}.log".format(dateString))
+    logFilePath = path.join(getcwd(),"logs","logFile-{0}.txt".format(dateString))
     with open(logFilePath,"w") as logFile:
         faAlgorithmParams, amplifierParams, exciterParams,\
         generatorParams, sensorParams, voltageReference, pidGainsThresholds =parseConfigurationFile()
@@ -147,7 +147,7 @@ if __name__ == '__main__':
             #TODO: Check a behaviour of algorithm, if you increase value of beta coefficient
             #
 
-            logFile.write("Generation: %d, Best Firefly's index: %d, Best Fitness: %0.4f, Time: %f".format(\
+            logFile.write("Generation: {}, Best Firefly's index: {}, Best Fitness: {:.4}, Time: {} \n".format(\
                 t, FindTheMostAtractiveFirefly(swarmOfFireflies),\
                 Best.getFitnessFunctionValue(),(datetime.now() - time).total_seconds()))
             print("Generation: %d, Best Firefly's index: %d, Best Fitness: %0.4f, Time: %f" % (\
