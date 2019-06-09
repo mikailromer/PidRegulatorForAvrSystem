@@ -106,6 +106,9 @@ if __name__ == '__main__':
         Gs = tf([sensorParams["Ks"]], [sensorParams["Ts"], 1])
         tableOfPoints=[]
         collectDictionaryOfBestGains = np.array([])
+        collectListOfTheBestProportionalGains = np.array([])
+        collectListOfTheBestInertialGains = np.array([])
+        collectListOfTheBestDerivativeGains = np.array([])
         bestFirefly = None
         swarmOfFireflies = createSwarmOfFireflies(faAlgorithmParams["N"], pidGainsThresholds, faAlgorithmParams["beta0"])
         alfa = faAlgorithmParams["alfa"]
@@ -141,24 +144,54 @@ if __name__ == '__main__':
             calculateFireflyLigthIntensivity(swarmOfFireflies[IndexOfTheMostAtractiveFirefly],Ga,Ge,Gg, Gs, voltageReference,faAlgorithmParams["ro"])
             Best = swarmOfFireflies[FindTheMostAtractiveFirefly(swarmOfFireflies)]
             collectDictionaryOfBestGains = np.append(collectDictionaryOfBestGains, Best.get_PidGains())
+            collectListOfTheBestProportionalGains = np.append(collectListOfTheBestProportionalGains, Best.get_Kp())
+            collectListOfTheBestInertialGains = np.append(collectListOfTheBestInertialGains, Best.get_Ki())
+            collectListOfTheBestDerivativeGains = np.append(collectListOfTheBestDerivativeGains, Best.get_Kd())
             alfa = alfa*faAlgorithmParams["delta"]*np.exp(np.sqrt(t))
             #tableOfPoints.append(collectListOfPoints(swarmOfFireflies))
-            #TODO: Change logfile format and print also values of PID gains: Kp, Ki, Kd
             #TODO: Check a behaviour of algorithm, if you increase value of beta coefficient
             #
 
-            logFile.write("Generation: {}, Best Firefly's index: {}, Best Fitness: {:.4}, Time: {} \n".format(\
+            logFile.write("Generation: {}, Best Firefly's index: {}, Best Fitness: {:.4}, Kp: {}, Ki: {}, Kd:{}, Time: {} \n".format(\
                 t, FindTheMostAtractiveFirefly(swarmOfFireflies),\
-                Best.getFitnessFunctionValue(),(datetime.now() - time).total_seconds()))
-            print("Generation: %d, Best Firefly's index: %d, Best Fitness: %0.4f, Time: %f" % (\
-                t, FindTheMostAtractiveFirefly(swarmOfFireflies),\
-                Best.getFitnessFunctionValue(),(datetime.now() - time).total_seconds()))
+                Best.getFitnessFunctionValue(),Best.get_Kp(),Best.get_Ki(),Best.get_Kd(),(datetime.now() - time).total_seconds()))
+            print("Generation: %d, Best Firefly's index: %d, Best Fitness: %0.4f, Kp: %f, Ki: %f, Kd:%f, Time: %f" % (\
+                t, FindTheMostAtractiveFirefly(swarmOfFireflies),Best.getFitnessFunctionValue(), Best.get_Kp(),Best.get_Ki(),\
+                Best.get_Kd(), (datetime.now() - time).total_seconds()))
 
+        plt.figure()
+        AvrSystemTransferFunction = ( Ga * Ge * Gg) / (1 + ( Ga * Ge * Gg * Gs))
+        T, Vout = step_response(AvrSystemTransferFunction * voltageReference)
+        plt.plot(T, Vout)
+        plt.title("AVR Regulation System's Response without PID controller.")
+        plt.xlabel("Time [s]")
+        plt.ylabel("Output Voltage [V]")
+        plt.xlim((0, T[-1]))
+        plt.grid()
+        plt.show()
+
+        plt.figure()
         plt.plot(Best.getResponseTimeVector(),Best.getResponseOutputVoltageVector())
         plt.title("AVR Regulation System's Response")
         plt.xlabel("Time [s]")
-        plt.xlabel("Output Voltage [V]")
+        plt.ylabel("Output Voltage [V]")
         plt.xlim((0,Best.getResponseTimeVector()[len(Best.getResponseTimeVector())-1]))
+        plt.grid()
+        plt.show()
+
+        generationsVector = []
+        for t in range(faAlgorithmParams["T"]):
+            generationsVector.append(t+1)
+
+        plt.figure()
+        plt.plot(generationsVector, collectListOfTheBestProportionalGains,'-r')
+        plt.plot(generationsVector, collectListOfTheBestInertialGains, '-g')
+        plt.plot(generationsVector, collectListOfTheBestDerivativeGains, '-b')
+        plt.title("AVR Regulation System's Best Proportional Gain")
+        plt.xlabel("Generation")
+        plt.ylabel("Gain")
+        plt.xlim((0, len(generationsVector)))
+        plt.legend(('Kp', 'Ki', 'Kd'))
         plt.grid()
         plt.show()
 
